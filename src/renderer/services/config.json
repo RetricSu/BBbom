@@ -1,0 +1,15 @@
+{
+    "BASE_URL":"https://api.huobi.pro",
+    "PRICE_URL":"https://api.huobi.pro/market/detail/merged?symbol=btcusdt",
+    "KLINE":"https://api.huobi.pro/market/history/kline",
+    "FREQUENCY":1000,
+    "PERIOD":60000,
+    "CHANGE":0.001,
+    "PERIOD_UP":60000,
+    "PERIOD_DOWN":60000,
+    "CHANGE_DOWN":0.01,
+    "CHANGE_UP":0.01,
+    "SOUNDTRACK_DOWN":"cell_ringing_music.mp3",
+    "SOUNDTRACK_UP":"ring_music.mp3",
+    "COLOR_THEME":"default" 
+}
