@@ -4,7 +4,7 @@
  * @Github: https://github.com/RetricSu
  * @Date: 2019-08-07 16:15:29
  * @LastEditors: Retric
- * @LastEditTime: 2019-08-10 16:03:00
+ * @LastEditTime: 2019-08-18 11:40:00
  -->
 <template>
   <div class="navbar">
@@ -42,8 +42,9 @@ export default {
     },
 
     quit: function() {
-      const app = require("electron").remote.app;
-      app.quit();
+      const remote = require("electron").remote;
+      let w = remote.getCurrentWindow();
+      w.hide();
     }
   }
 };

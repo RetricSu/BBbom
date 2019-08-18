@@ -4,7 +4,7 @@
  * @Github: https://github.com/RetricSu
  * @Date: 2019-08-07 15:42:24
  * @LastEditors: Retric
- * @LastEditTime: 2019-08-10 12:40:47
+ * @LastEditTime: 2019-08-11 21:09:58
  */
 'use strict'
 
@@ -32,6 +32,14 @@ let mainConfig = {
           'css-loader',
           'sass-loader'
         ]
+      },
+      {
+        test: /\.(ico|icns|png)(\?.*)?$/,
+        loader: 'url-loader',
+        options: {
+          limit: 10000,
+          name: 'icon/[name]--[folder].[ext]'
+        }
       },
       {
         test: /\.js$/,

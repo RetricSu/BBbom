@@ -4,7 +4,7 @@
  * @Github: https://github.com/RetricSu
  * @Date: 2019-08-07 16:46:13
  * @LastEditors: Retric
- * @LastEditTime: 2019-08-11 16:30:24
+ * @LastEditTime: 2019-08-18 11:52:11
  -->
 <template>
   <div>
@@ -12,6 +12,10 @@
       <img src="../../assets/BTC_Logo.svg" alt="">
     </div>
     
+    <!--
+    <circleChange ref="circleChange" :change="change"></circleChange>
+    
+    -->
     <!--
     <circleProgress :CHANGE_PERCENT="change"></circleProgress>
     -->
@@ -30,6 +34,7 @@ import bus from '../../services/bus';
 import Vue from 'vue';
 import CONFIG from '../../services/config.json'
 import circleProgress from '../sections/circleProgress'
+import circleChange from '../sections/circleChange'
 var setting;
 
 //load user setting from local storage
@@ -42,13 +47,14 @@ export default {
     return {
       price: '...',
       rmb_price: '...',
-      change:'',
+      change:0.3,
       down_sound:__static+'/sound/'+ ( setting?setting.sound_down:null || CONFIG.SOUNDTRACK_DOWN),
       up_sound:__static+'/sound/'+( setting?setting.sound_up:null || CONFIG.SOUNDTRACK_UP)
     };
   },
   components:{
-    circleProgress
+    circleProgress,
+    circleChange
   },
   mounted() {
     var that = this;
@@ -56,7 +62,7 @@ export default {
     dataApi.updatePrice();
     
     //record price change percentage and alert
-    dataApi.getChange();
+    //dataApi.getChange();
     dataApi.watchPriceUp();
     dataApi.watchPriceDown();
 
@@ -64,19 +70,28 @@ export default {
     bus.$on('newPrice', function(data){
       //change background color and opacity according to change percent.
       let change = data[0] - that.price;
+      //let changevol = Math.abs(data[0] - that.price)/that.price;
       let changevol = Math.abs(data[0] - that.price)/that.price;
+      let changevol2 = (data[0] - that.price)/that.price
+      
       changevol = changevol<0.0001?changevol*1000:changevol;
       changevol = changevol<0.001?changevol*100:changevol;
       changevol = changevol<0.01?changevol*10:changevol;
+      
       if(change >= 0){
         document.body.style.background = 'rgba(77, 255, 133, '+changevol+')';
       }else{
         document.body.style.background = 'rgba(255, 77, 77, '+changevol+')';
       }
-      console.log(changevol);
+      //console.log(changevol);
 
+      //that.$refs.circleChange.setChange(change >=0,changevol);
+
+      that.change = changevol;
       that.price = data[0];
       that.rmb_price = data[1];
+
+      that.$electron.ipcRenderer.send('set-new-price-on-tray',that.price);
     });
 
     //listen for alert change

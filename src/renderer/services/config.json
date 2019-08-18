@@ -9,6 +9,9 @@
     "PERIOD_DOWN":60000,
     "CHANGE_DOWN":0.01,
     "CHANGE_UP":0.01,
+    "IS_FIXED_PRICE_WATCHED":false,
+    "FIXED_PRICE_UP":1000000,
+    "FIXED_PRICE_DOWN":0,
     "SOUNDTRACK_DOWN":"cell_ringing_music.mp3",
     "SOUNDTRACK_UP":"ring_music.mp3",
     "COLOR_THEME":"default" 
