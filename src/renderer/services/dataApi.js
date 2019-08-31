@@ -4,54 +4,72 @@
  * @Github: https://github.com/RetricSu
  * @Date: 2019-08-09 14:33:48
  * @LastEditors: Retric
- * @LastEditTime: 2019-08-18 11:51:08
+ * @LastEditTime: 2019-08-27 13:58:42
  */
-const BASE_URL = require('../services/config').BASE_URL;
-const PRICE_URL = require('../services/config').PRICE_URL;
-const FREQUENCY = require('../services/config').FREQUENCY;
-const PERIOD = require('../services/config').PERIOD;
-const CHANGE = require('../services/config').CHANGE;
-var CHANGE_UP,CHANGE_DOWN,PERIOD_UP,PERIOD_DOWN,
-IS_FIXED_PRICE_WATCHED,FIXED_PRICE_UP,FIXED_PRICE_DOWN;
-var setting;
-const default_config = require('../services/config');
-/*
-if (localStorage.setting) {
-    setting = JSON.parse(localStorage.setting);
-    CHANGE_UP = setting.change_up || default_config.CHANGE_UP;
-    CHANGE_DOWN = setting.change_down || default_config.CHANGE_DOWN;
-    PERIOD_UP = setting.period_up || default_config.PERIOD_UP;
-    PERIOD_DOWN = setting.period_down || default_config.PERIOD_DOWN;
-} else {
-    CHANGE_UP = default_config.CHANGE_UP;
-    CHANGE_DOWN = default_config.CHANGE_DOWN;
-    PERIOD_UP = default_config.PERIOD_UP;
-    PERIOD_DOWN = default_config.PERIOD_DOWN;
-}*/
+var db = require('./db');
 
-//load user setting
-localStorage.setting ? setting = JSON.parse(localStorage.setting) : setting = {};
-CHANGE_UP = setting.change_up || default_config.CHANGE_UP;
-CHANGE_DOWN = setting.change_down || default_config.CHANGE_DOWN;
-PERIOD_UP = setting.period_up || default_config.PERIOD_UP;
-PERIOD_DOWN = setting.period_down || default_config.PERIOD_DOWN;
-IS_FIXED_PRICE_WATCHED = setting.is_fixed_price_watched || default_config.IS_FIXED_PRICE_WATCHED;
-FIXED_PRICE_UP = setting.fixed_price_up || default_config.FIXED_PRICE_UP;
-FIXED_PRICE_DOWN = setting.fixed_price_down || default_config.FIXED_PRICE_DOWN;
+loadData();
 
+var BASE_URL,
+    PRICE_URL,
+    FREQUENCY,
+    CHANGE_UP,
+    CHANGE_DOWN,
+    PERIOD_UP,
+    PERIOD_DOWN,
+    IS_FIXED_UP,
+    IS_FIXED_DOWN,
+    FIXED_PRICE_UP,
+    FIXED_PRICE_DOWN;
 
 const axios = require('axios');
-import bus from '../services/bus'
+import bus from './bus'
 
-var changeFristPrice = 0; //alert period time's first price
-var changeLastPrice = 0; //alert period time's last price, if two price abs greater than CHANGE, give alert to user.
 var MAX_PRICE_UP = 0;
 var MIN_PRICE_UP = 10000000000000000000;
 var MAX_PRICE_DOWN = 0;
 var MIN_PRICE_DOWN = 10000000000000000000;
 
+function loadData() {
+    var PREFERENCES = db.get('preferences').value();
+    console.log('PREFERENCES:',PREFERENCES);
+    let value = PREFERENCES;
+        //value = JSON.parse(value);
+        BASE_URL = value.BASE_URL;
+        PRICE_URL = value.PRICE_URL;
+        FREQUENCY = value.FREQUENCY;
+        CHANGE_UP = value.CHANGE_UP;
+        CHANGE_DOWN = value.CHANGE_DOWN;
+        PERIOD_UP = value.PERIOD_UP;
+        PERIOD_DOWN = value.PERIOD_DOWN;
+        IS_FIXED_UP = value.IS_FIXED_UP;
+        IS_FIXED_DOWN = value.IS_FIXED_DOWN;
+        FIXED_PRICE_UP = value.FIXED_PRICE_UP;
+        FIXED_PRICE_DOWN = value.FIXED_PRICE_DOWN;
+}
 
 export default {
+    
+    getdb: function(){
+        return db;
+    },
+
+    updatePreferences: function(pref){
+        console.log('update prepare:',pref,typeof pref);
+        let p = db.get('preferences').value();
+        let newdata = Object.assign({},p,pref);
+        db.set('preferences', newdata) // 通过set方法来对对象操作
+          .write() 
+    },
+
+    updateSinglePreference: function(key,value){
+        db.set('preferences.'+key, value) // 通过set方法来对对象操作
+          .write()
+    },
+
+    getPreferences: function(){
+        return db.get('preferences').value(); 
+    },
 
     getPrice: function () {
         var that = this;
@@ -60,21 +78,33 @@ export default {
             .then(response => {
 
                 let price = response.data.tick.close.toFixed(2);
-                let last24h_price = response.data.tick.open.toFixed(2);
                 let rmb_price = (price * 6.99).toFixed(2);
-                
+                let last24h_price = response.data.tick.open.toFixed(2);
+
+                // var is week string type may contains bugs
+                // when excute > < = operation with number.
+                // so need to covert to Number type.
+                /********** really ugly ***********/
+                price = parseFloat(price);
+                MAX_PRICE_UP = parseFloat(MAX_PRICE_UP);
+                MIN_PRICE_UP = parseFloat(MIN_PRICE_UP);
+                MAX_PRICE_DOWN = parseFloat(MAX_PRICE_DOWN);
+                MIN_PRICE_DOWN = parseFloat(MIN_PRICE_DOWN);
+                /********** really ugly ***********/
+                let last24h_change = (price - last24h_price) / last24h_price * 100;
+
+                last24h_change = last24h_change.toFixed(2) + '%';
+
                 //get fixed price alert if is ture
-                IS_FIXED_PRICE_WATCHED ? 
-                that.watchFixedPrice(price) : null;
+                that.watchFixedPrice(price);
 
                 //get max and min price to call margin change alert 
                 MAX_PRICE_UP <= price ? MAX_PRICE_UP = price : MAX_PRICE_UP;
                 MIN_PRICE_UP >= price ? MIN_PRICE_UP = price : MIN_PRICE_UP;
                 MAX_PRICE_DOWN <= price ? MAX_PRICE_DOWN = price : MAX_PRICE_DOWN;
                 MIN_PRICE_DOWN >= price ? MIN_PRICE_DOWN = price : MIN_PRICE_DOWN;
-                
-                bus.$emit('newPrice', [price, rmb_price, last24h_price]);
-                
+
+                bus.$emit('newPrice', [this.fixlenAddZero(price), rmb_price, last24h_price, last24h_change]);
             })
     },
 
@@ -85,81 +115,40 @@ export default {
         }, FREQUENCY);
     },
 
-    getChange: function () {
-        var that = this;
-        axios
-            .get(PRICE_URL)
-            .then(response => {
-                let price = response.data.tick.close.toFixed(2);
-                let result = that.calChange(changeFristPrice, price);
-                changeFristPrice = price;
-                bus.$emit('newAlert', result);
-            })
-    },
-
-    calChange: function (p1, p2) {
-        if (p1 == 0) return;
-
-        if ((p2 - p1) >= 0) {
-            if (Math.abs(p2 - p1) / p1 >= CHANGE_UP)
-                return {
-                    isAlert: true,
-                    isUp: true,
-                    change: (p2 - p1) / p1
-                }
-            else
-                return {
-                    isAlert: false,
-                    isUp: true,
-                    change: (p2 - p1) / p1
-                }
-        } else {
-            if (Math.abs(p2 - p1) / p1 >= CHANGE_DOWN)
-                return {
-                    isAlert: true,
-                    isUp: false,
-                    change: (p2 - p1) / p1
-                }
-            else
-                return {
-                    isAlert: false,
-                    isUp: false,
-                    change: (p2 - p1) / p1
-                }
-        }
-    },
-
-    changeAlert: function () {
-        var that = this;
-        setInterval(() => {
-            that.getChange();
-        }, PERIOD);
-    },
-
     getChangeMax: function () {
-        let change_up = Math.abs( MAX_PRICE_UP - MIN_PRICE_UP ) / MIN_PRICE_UP ;
-        
-        change_up >= CHANGE_UP ? 
-        bus.$emit('newAlert', {
-            isAlert: true,
-            isUp: true,
-            change: change_up
-        }) : null; 
+        let change_up = Math.abs(MAX_PRICE_UP - MIN_PRICE_UP) / MIN_PRICE_UP;
+
+        CHANGE_UP = parseFloat(CHANGE_UP);
+        change_up = parseFloat(change_up);
+
+        change_up >= CHANGE_UP ?
+            bus.$emit('newAlert', {
+                isAlert: true,
+                isUp: true,
+                type: 'percentage alert',
+                change: change_up,
+                PERIOD_UP: PERIOD_UP
+            }) : null;
 
         MAX_PRICE_UP = 0;
         MIN_PRICE_UP = 10000000000000000000;
     },
 
     getChangeMin: function () {
-        let change_down = Math.abs( MAX_PRICE_DOWN - MIN_PRICE_DOWN ) / MIN_PRICE_DOWN ;
-        
+        let change_down = Math.abs(MAX_PRICE_DOWN - MIN_PRICE_DOWN) / MIN_PRICE_DOWN;
+
+        CHANGE_DOWN = parseFloat(CHANGE_DOWN);
+        change_down = parseFloat(change_down);
+
         change_down >= CHANGE_DOWN ?
-        bus.$emit('newAlert', {
-            isAlert: true,
-            isUp: false,
-            change: change_down
-        }) : null; 
-        
+            bus.$emit('newAlert', {
+                isAlert: true,
+                isUp: false,
+                type: 'percentage alert',
+                change: change_down,
+                PERIOD_DOWN: PERIOD_DOWN
+            }) : null;
+
         MAX_PRICE_DOWN = 0;
         MIN_PRICE_DOWN = 10000000000000000000;
     },
@@ -167,7 +156,6 @@ export default {
     watchPriceUp: function () {
         var that = this;
         setInterval(() => {
-            //that.getChange();
             that.getChangeMax();
         }, PERIOD_UP);
     },
@@ -175,73 +163,51 @@ export default {
     watchPriceDown: function () {
         var that = this;
         setInterval(() => {
-            //that.getChange();
             that.getChangeMin();
         }, PERIOD_DOWN);
     },
 
-    sendFixedAlert: function(isUp){
-        isUp ? 
-        //window.localStorage.setting.fixed_price_up = default_config.FIXED_PRICE_UP
-        FIXED_PRICE_UP = default_config.FIXED_PRICE_UP
-        :
-        //window.localStorage.setting.fixed_price_down = default_config.FIXED_PRICE_DOWN;
-        FIXED_PRICE_DOWN = default_config.FIXED_PRICE_DOWN;
+    sendFixedAlert: function (isUp) {
         bus.$emit('newAlert', {
             isAlert: true,
             isUp: isUp,
-            change: isUp ? 'reach fixed up price' + FIXED_PRICE_UP:'reach fixed down price' + FIXED_PRICE_DOWN
+            type: 'fixed alert',
+            change: 0,
+            FIXED_PRICE_UP: FIXED_PRICE_UP,
+            FIXED_PRICE_DOWN: FIXED_PRICE_DOWN
         });
-        
+        isUp ?
+            IS_FIXED_UP = false :
+            IS_FIXED_DOWN = false;
+
+        isUp ?
+            db.set('preferences.IS_FIXED_UP', false).write() :
+            db.set('preferences.IS_FIXED_DOWN', false).write();
     },
-    
-    watchFixedPrice: function(price){
-        console.log(price,FIXED_PRICE_UP,FIXED_PRICE_DOWN);
-        price >= FIXED_PRICE_UP ? this.sendFixedAlert(true):null;
-        /*
-        () => {
-            bus.$emit('newAlert', {
-                isAlert: true,
-                isUp: true,
-                change: 'reach fixed up price' + FIXED_PRICE_UP
-            });
-            localStorage.setting.fixed_price_up = default_config.FIXED_PRICE_UP;
-        }: null;*/
-        
-        price <= FIXED_PRICE_DOWN ? this.sendFixedAlert(false):null;
-        /*
-        () => {
-            bus.$emit('newAlert', {
-                isAlert: true,
-                isUp: false,
-                change: 'reach fixed down price' + FIXED_PRICE_DOWN
-            }) 
-            localStorage.setting.fixed_price_down = default_config.FIXED_PRICE_DOWN;
-        } : null;*/
+
+    watchFixedPrice: function (price) {
+        price = parseFloat(price);
+
+        FIXED_PRICE_UP = parseFloat(FIXED_PRICE_UP);
+        FIXED_PRICE_DOWN = parseFloat(FIXED_PRICE_DOWN);
+
+        IS_FIXED_UP && price >= FIXED_PRICE_UP ? this.sendFixedAlert(true) : null;
+        IS_FIXED_DOWN && price <= FIXED_PRICE_DOWN ? this.sendFixedAlert(false) : null;
+    },
+
+    fixlenAddZero: function (value) {
+        var value = Math.round(parseFloat(value) * 100) / 100;
+        var xsd = value.toString().split(".");
+        if (xsd.length == 1) {
+            value = value.toString() + ".00";
+            return value;
+        }
+        if (xsd.length > 1) {
+            if (xsd[1].length < 2) {
+                value = value.toString() + "0";
+            }
+            return value;
+        }
     }
+
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

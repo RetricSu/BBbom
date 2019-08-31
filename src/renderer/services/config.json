@@ -4,15 +4,16 @@
     "KLINE":"https://api.huobi.pro/market/history/kline",
     "FREQUENCY":1000,
     "PERIOD":60000,
-    "CHANGE":0.001,
     "PERIOD_UP":60000,
     "PERIOD_DOWN":60000,
     "CHANGE_DOWN":0.01,
     "CHANGE_UP":0.01,
     "IS_FIXED_PRICE_WATCHED":false,
+    "IS_FIXED_UP":false,
+    "IS_FIXED_DOWN":false,
     "FIXED_PRICE_UP":1000000,
     "FIXED_PRICE_DOWN":0,
     "SOUNDTRACK_DOWN":"cell_ringing_music.mp3",
     "SOUNDTRACK_UP":"ring_music.mp3",
-    "COLOR_THEME":"default" 
+    "COLOR_THEME":"light" 
 }

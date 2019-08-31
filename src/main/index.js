@@ -4,7 +4,7 @@
  * @Github: https://github.com/RetricSu
  * @Date: 2019-08-07 15:42:24
  * @LastEditors: Retric
- * @LastEditTime: 2019-08-18 11:53:58
+ * @LastEditTime: 2019-08-26 18:36:09
  */
 import {
   app,
@@ -46,7 +46,7 @@ if (process.env.NODE_ENV !== 'development') {
     })
 
     // Open the DevTools.
-    //mainWindow.webContents.openDevTools()
+    // mainWindow.webContents.openDevTools()
 
     // make the app always-on-top and overlap
     app.dock.hide();
@@ -97,11 +97,35 @@ if (process.env.NODE_ENV !== 'development') {
         `file://${__dirname}/index.html#setting`
       //console.log(modalPath)
       const win = new BrowserWindow({
-        width: 400,
-        height: 800,
+        width: 700,
+        height: 400,
         frame: false
       });
       win.loadURL(modalPath);
+  }
+
+  function openTipingWindow(){
+    const tipingPath = process.env.NODE_ENV === 'development' ?
+        `http://localhost:9080/#/tiping` :
+        `file://${__dirname}/index.html#tiping`
+      //console.log(modalPath)
+      const win = new BrowserWindow({
+        width: 500,
+        height: 600
+      });
+    win.loadURL(tipingPath);
+  }
+
+  function openAboutWindow(){
+    const aboutPath = process.env.NODE_ENV === 'development' ?
+        `http://localhost:9080/#/about` :
+        `file://${__dirname}/index.html#about`
+      //console.log(modalPath)
+      const win = new BrowserWindow({
+        width: 500,
+        height: 600
+      });
+    win.loadURL(aboutPath);
   }
 
 
@@ -109,9 +133,9 @@ if (process.env.NODE_ENV !== 'development') {
   function setTray() {
     //const nativeImage = require('electron').nativeImage
     const iconPath = require('path').join(__dirname, 'bitcoin.png')
-    //let image = nativeImage.createFromPath(iconPath);
+    //let image = nativeImage.createFromPath(iconPath); '../../../static/bitcoin.png'
 
-    let tray = new Tray(iconPath);
+    let tray = new Tray(__static+'/bitcoin.png');
     const contextMenu = Menu.buildFromTemplate([
       {
         label: '打开',
@@ -121,10 +145,28 @@ if (process.env.NODE_ENV !== 'development') {
         }
       },
       {
+        type: 'separator',
+      },
+      {
         label: '设置',
         click: function () {
           openSettingWindow();
         }
+      },
+      {
+        label: '赞赏',
+        click: function () {
+          openTipingWindow();
+        }
+      },
+      {
+        label: '关于',
+        click: function () {
+          openAboutWindow();
+        }
+      },
+      {
+        type: 'separator',
       },
       {
         label: '退出',
@@ -139,6 +181,7 @@ if (process.env.NODE_ENV !== 'development') {
     tray.setContextMenu(contextMenu);
 
     ipcMain.on('set-new-price-on-tray', (event, price) => {
+      price = price.toString();
       tray.setTitle(price);
       tray.setToolTip(price);
     })

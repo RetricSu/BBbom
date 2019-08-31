@@ -4,7 +4,7 @@
  * @Github: https://github.com/RetricSu
  * @Date: 2019-08-07 16:15:29
  * @LastEditors: Retric
- * @LastEditTime: 2019-08-18 11:40:00
+ * @LastEditTime: 2019-08-26 17:52:04
  -->
 <template>
   <div class="navbar">
@@ -57,7 +57,7 @@ export default {
   display: block;
 }
 .navbar {
-  color: black;
+  color: var(--background-color);
   -webkit-app-region: drag;
 }
 

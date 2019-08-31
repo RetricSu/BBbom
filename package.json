@@ -1,6 +1,6 @@
 {
   "name": "bbbom",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "author": "RetricSu <inneverland2013@gmail.com>",
   "description": "An electron-vue project",
   "license": null,
@@ -58,6 +58,8 @@
     "@fortawesome/free-solid-svg-icons": "^5.10.1",
     "@fortawesome/vue-fontawesome": "^0.1.6",
     "axios": "^0.18.0",
+    "level": "^5.0.1",
+    "lowdb": "^1.0.0",
     "progressbar.js": "^1.0.1",
     "vue": "^2.5.16",
     "vue-electron": "^1.0.6",

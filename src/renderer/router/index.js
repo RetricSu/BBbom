@@ -4,7 +4,7 @@
  * @Github: https://github.com/RetricSu
  * @Date: 2019-08-07 15:42:24
  * @LastEditors: Retric
- * @LastEditTime: 2019-08-10 16:15:35
+ * @LastEditTime: 2019-08-26 14:38:02
  */
 import Vue from 'vue'
 import Router from 'vue-router'
@@ -22,6 +22,16 @@ export default new Router({
       path: '/setting',
       name: 'setting',
       component: require('@/components/setting').default,
+    },
+    {
+      path: '/tiping',
+      name: 'tiping',
+      component: require('@/components/tiping').default
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: require('@/components/about').default
     },
     {
       path: '*',
